@@ -24,3 +24,13 @@ This repository targets a **native Android ARM64 implementation**. Winlator, Win
 - [Compatibility research (not the target deliverable)](docs/COMPATIBILITY_ROUTE.md)
 
 The native build is not considered successful until CI compiles actual native engine/recompilation implementation code. A successful Android wrapper build or static audit does not satisfy this requirement.
+
+## Analyze the downloaded Android runner APK
+
+A manual GitHub Actions workflow has been added for static inspection:
+
+- [Analyze Android runner APK](.github/workflows/analyze-native-apk.yml)
+- It downloads an APK from a Google Drive share URL, decodes Android resources with Apktool, decompiles DEX bytecode with JADX, inventories bundled native libraries, and searches for JNI, graphics, game-data, and compatibility-layer indicators.
+- To run it: open **Actions → Analyze Android runner APK (native-port research) → Run workflow**, paste the Google Drive share link, and start the job. The file must be accessible to anyone with the link.
+- The workflow publishes only a short-lived analysis report and inventories, not the APK or full decompiled source. This avoids making the downloaded app or reconstructed source publicly downloadable from a public repository.
+- The workflow has not yet been run against the target APK. Its output is evidence for manual review, not proof that the game is fully native or playable.
