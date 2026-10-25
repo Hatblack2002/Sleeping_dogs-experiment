@@ -19,6 +19,7 @@ This repository targets a **native Android ARM64 implementation**. Winlator, Win
 ## Existing research
 
 - [Native route decision and candidate verification plan](docs/NATIVE_ROUTE_DECISION.md)
+- [Native implementation strategy and architecture gates](docs/NATIVE_IMPLEMENTATION_STRATEGY.md)
 - [Native feasibility gate](docs/FEASIBILITY_GATE.md)
 - [Renderer/platform audit](docs/RENDERER_PLATFORM_AUDIT.md)
 - [Compatibility research (not the target deliverable)](docs/COMPATIBILITY_ROUTE.md)
