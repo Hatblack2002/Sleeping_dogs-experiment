@@ -10,6 +10,7 @@ Produce reproducible evidence before attempting a game port:
 2. Record licensing/provenance constraints before copying or adapting any code.
 3. Inventory Windows/D3D11/x64-specific dependencies and likely porting boundaries.
 4. Run the audit in GitHub Actions and publish the report as a workflow artifact.
+5. Evaluate Windows compatibility/emulation as a separate, potentially more practical route.
 
 ## Important limitations
 
@@ -24,7 +25,10 @@ Open **Actions → TheoryEngine feasibility audit → Run workflow**. The workfl
 
 Upstream: https://github.com/SDmodding/TheoryEngine
 
-
 ## Current feasibility result
 
-See docs/FEASIBILITY_GATE.md for evidence-based findings and docs/RENDERER_PLATFORM_AUDIT.md for the concrete renderer, OS, and game-integration boundaries. The scheduled audit, NDK probe, and regression tests run through GitHub Actions.
+- [FEASIBILITY_GATE.md](docs/FEASIBILITY_GATE.md): evidence-based native-port gates.
+- [RENDERER_PLATFORM_AUDIT.md](docs/RENDERER_PLATFORM_AUDIT.md): renderer, OS, and game-integration boundaries.
+- [COMPATIBILITY_ROUTE.md](docs/COMPATIBILITY_ROUTE.md): separate Windows-compatibility route and test plan.
+
+The scheduled audit, NDK probe, and regression tests run through GitHub Actions. Compatibility/emulation is not a native port, and no APK or playable result is claimed until it has been built and tested on hardware.
