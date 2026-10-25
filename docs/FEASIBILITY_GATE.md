@@ -9,7 +9,7 @@
 - The upstream README describes TheoryEngine as a work-in-progress reverse-engineered reimplementation of the Sleeping Dogs: Definitive Edition engine based on released debug symbols. It explicitly says the project is not a complete rewrite.
 - The upstream umbrella header requires C++17 and describes the target as 64-bit x64. It hard-defines THEORY_WINDOWS and THEORY_PLATFORM_PC, includes Direct3D 11, and includes PC-specific process/string implementations.
 - The upstream README says the project has no license because parts may be identical or similar to the original game's code. This is a provenance and permission blocker for copying or redistributing the source.
-- GitHub Actions run #2 completed successfully and scanned 143 source/text files. Run #3 also passed the regression tests and generated the audit artifact.
+- GitHub Actions run #5 completed the audit and uploaded the report artifact; run #3 independently passed the regression tests. The latest scan examined 143 source/text files and detected 13 Direct3D 11 indicators, 3 Windows API/platform indicators, 9 x86/x64 indicators, 2 hard-coded PC platform defines, and zero CMake entry points. These are pattern-scan counts, not a complete dependency analysis.
 
 ## Engineering conclusion
 
