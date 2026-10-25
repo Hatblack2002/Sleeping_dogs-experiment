@@ -5,7 +5,7 @@ This repository targets a **native Android ARM64 implementation**. Winlator, Win
 ## Current state
 
 - The public TheoryEngine repository is an incomplete reverse-engineered reference, not the original complete game engine.
-- A community developer has now publicly claimed to have a native ARM64 static recompilation of Sleeping Dogs: Definitive Edition, with source intended for a GitHub release after optimization. That is the most promising lead, but the source/release and reproducible build still need independent verification.
+- A community developer publicly shares an APK and claims a static ARM64 recompilation of Sleeping Dogs: Definitive Edition. The post does not establish a canonical source repository, and a public catalog says source is unavailable and its APK is unreviewed. Treat this as an unverified lead. See [community recompilation verification status](docs/COMMUNITY_RECOMP_STATUS.md).
 - The previous `android-wrapper/` launcher was a mistaken detour: it merely opened Winlator and did not run the game natively. Do not treat its APK as a project deliverable.
 - No native game APK built from verified source, playable build produced by this repository, or successful device test is currently available.
 
@@ -33,4 +33,4 @@ A manual GitHub Actions workflow has been added for static inspection:
 - It downloads an APK from a Google Drive share URL, decodes Android resources with Apktool, decompiles DEX bytecode with JADX, inventories bundled native libraries, and searches for JNI, graphics, game-data, and compatibility-layer indicators.
 - To run it: open **Actions → Analyze Android runner APK (native-port research) → Run workflow**, paste the Google Drive share link, and start the job. The file must be accessible to anyone with the link.
 - The workflow publishes only a short-lived analysis report and inventories, not the APK or full decompiled source. This avoids making the downloaded app or reconstructed source publicly downloadable from a public repository.
-- The workflow has not yet been run against the target APK. Its output is evidence for manual review, not proof that the game is fully native or playable.
+- The workflow's static findings are evidence for manual review, not proof that the game is fully native or playable. A prior APK audit found a large library named `libnfsmw.so` and DXVK libraries; this does not establish that the APK contains Sleeping Dogs code. See [community recompilation verification status](docs/COMMUNITY_RECOMP_STATUS.md).
