@@ -5,9 +5,11 @@
 
 ## Decision
 
-Do not start by writing a new Android shell or by trying to cross-compile the existing TheoryEngine headers. The highest-value lead is to verify whether the reported community static-recompilation project has a real, obtainable source/release and reproducible build. Until its maintainers publish or provide verifiable source and build evidence, treat it as an **unverified lead, not an available implementation**.
+The deliverable is a genuine native Android port, not a wrapper or a compatibility-layer launcher marketed as native. However, “native” does not mean the original game source must be present: a static recompilation can translate the original executable's functions into ARM64 machine code and load the user's legally owned game data at runtime. That is materially different from a container that runs the original Windows executable through Wine/Box64/DXVK.
 
-If that lead cannot be verified, the current public code does not provide a practical, lawful, complete foundation for a playable native port. In that case, the project needs a new source foundation or a clean-room engine reimplementation, which is a substantial engine-development effort—not an NDK flag change.
+The community APK must be classified from evidence, not its branding. If it is a launcher/container that accepts retail game files and delegates execution to another runtime, it is not the implementation target. If it contains generated ARM64 code corresponding to the game's executable and directly executes it in-process, it may be a useful technical reference, but its APK alone is not a reproducible source foundation.
+
+The project should pursue a reproducible native implementation from verified source or generated ARM64 recompilation output. Do not spend further effort on wrapper UI or treat an APK's large native library as proof of the game's identity.
 
 ## Candidate assessment
 
