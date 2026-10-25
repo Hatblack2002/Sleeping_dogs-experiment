@@ -68,6 +68,28 @@ jobs:
           "$JADX_BIN" --show-bad-code -d work/jadx work/runner.apk 2>&1 | tee report/jadx.log
           find work/apktool/lib -type f -name '*.so' -print 2>/dev/null | sort > report/native-libraries.txt || true
           find work/jadx/sources -type f -name '*.java' 2>/dev/null | sort > report/java-files.txt || true
+          unzip -Z1 work/runner.apk | sort > report/apk-file-inventory.txt
+          {
+            echo "# ELF identification and dynamic dependencies"
+            while IFS= read -r lib; do
+              echo
+              echo "## $lib"
+              file "$lib"
+              readelf -h "$lib" 2>&1 | grep -E 'Class:|Data:|Type:|Machine:|Entry point' || true
+              echo "### NEEDED / SONAME"
+              readelf -d "$lib" 2>&1 | grep -E 'NEEDED|SONAME|RPATH|RUNPATH' || true
+              echo "### Exported symbols (first 120)"
+              readelf -Ws "$lib" 2>/dev/null | awk '$4=="FUNC" && $7!="UND" {print $8}' | sort -u | head -120
+            done < report/native-libraries.txt
+          } > report/elf-analysis.txt
+          {
+            echo "# Selected native binary strings"
+            while IFS= read -r lib; do
+              echo
+              echo "## $lib"
+              strings -a "$lib" | grep -Ei 'sleeping dogs|sdhdship|hkship|true crime|united front|square enix|bink2w64|dxvk|wine|box64|fex|winlator|direct3d|d3d11|vulkan|renderer|game.?data|\.drs|\.pak|\.exe|\.dll|error|version' | head -250 || true
+            done < report/native-libraries.txt
+          } > report/native-string-indicators.txt
 
       - name: Generate static analysis report
         run: |
@@ -121,7 +143,7 @@ jobs:
                   if len(hits)>=20: break
               if len(hits)>=20: break
             lines += ["",f"## Indicators: {label}"] + (hits or ["- No matches in decompiled Java output"])
-          lines += ["","## Notes","- A .so file or JNI call does not prove the entire game engine is native.","- A Java app may still launch an external compatibility layer; inspect process calls and bundled libraries together.","- JADX can fail to reconstruct some methods; missing output is not proof that code is absent.","- For safety, only this report and file inventories are uploaded. APK and decompiled source stay in the runner and are not published as artifacts.","","## Inventories",f"- Java file list: report/java-files.txt ({len(files)} entries)","- Native library list: report/native-libraries.txt","- JADX log: report/jadx.log"]
+          lines += ["","## Notes","- A .so file or JNI call does not prove the entire game engine is native.","- A Java app may still launch an external compatibility layer; inspect process calls and bundled libraries together.","- JADX can fail to reconstruct some methods; missing output is not proof that code is absent.","- For safety, only this report and file inventories are uploaded. APK and decompiled source stay in the runner and are not published as artifacts.","","## Inventories",f"- Java file list: report/java-files.txt ({len(files)} entries)","- Native library list: report/native-libraries.txt","- APK file inventory: report/apk-file-inventory.txt","- ELF headers and dynamic dependencies: report/elf-analysis.txt","- Selected native strings: report/native-string-indicators.txt","- JADX log: report/jadx.log"]
           out.write_text("\n".join(lines)+"\n")
           PY
           cat report/native-port-audit.md >> "$GITHUB_STEP_SUMMARY"
@@ -136,5 +158,8 @@ jobs:
             report/native-libraries.txt
             report/java-files.txt
             report/jadx.log
+            report/apk-file-inventory.txt
+            report/elf-analysis.txt
+            report/native-string-indicators.txt
           retention-days: 3
           if-no-files-found: error
