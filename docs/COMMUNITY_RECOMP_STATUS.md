@@ -2,32 +2,50 @@
 
 **Checked:** 2026-10-25  
 **Repository:** `Hatblack2002/Sleeping_dogs-experiment`  
-**Status:** An APK/build is being shared by a community poster, but a canonical source repository and reproducible build have not been verified.
+**Status:** Static evidence now supports a native ARM64 recompilation-style architecture, but game identity, source provenance, and reproducibility remain unverified.
 
-## New evidence
+## New evidence from the reference APK
 
-- Reddit post by the account that says it produced the port: https://www.reddit.com/r/AndroidNativePorts/comments/1x4ji39/finished_and_optimized_a_few_ports_of_different/
-  - The post describes a Sleeping Dogs: Definitive Edition Android build and says its game code was translated to ARM64; it reports 194,020 functions plus 636 Bink functions.
-  - The post includes a Google Drive folder link and says the supported executable is supplied separately.
-  - These are poster claims, not source-level verification. The post says future releases/updates will be in a Discord server and does not provide a canonical source repository in the post itself.
-- A follow-up post on 2026-10-23 also points users to a download, but does not establish a source repository: https://www.reddit.com/r/AndroidNativePorts/comments/1xdhife/sleeping_dogs_definitive_edition_android_port/
-- Current catalog entry: https://droidports.com/games/sleeping-dogs-definitive-edition/
-  - It labels the port a static recompilation and says retail PC files are required.
-  - It explicitly says there is no public source code and that its APK has not been reviewed.
+A successful GitHub Actions static audit inspected the reference APK:
 
-## Interpretation of the earlier APK audit
+- APK SHA-256: `64bece33b795449aaf29146bc2cbb84686c8cccd578a4ba19994902fe3cdc9be`
+- Package: `com.sdre.sleepingdogs.steam`
+- Entry: `android.app.NativeActivity`
+- Main ARM64 library: `libnfsmw.so`, 103,806,248 bytes.
+- The library exports `ANativeActivity_onCreate`, `StartGuest`, `GuestAlloc`, `ApiThunkFor`, `RegisterApi`, many generated-looking `f_140001...` functions, and graphics symbols `NgfxD3D11CreateDevice` / `NgfxCreateDXGIFactory1`.
+- The APK bundles DXVK D3D11/DXGI libraries and `libvulkan_freedreno.so`.
+- The ZIP inventory does not contain an obvious Windows game executable or retail assets, indicating game files are expected separately.
+- [Full static audit and interpretation](REFERENCE_APK_AUDIT_2026-10-25.md)
+- [GitHub Actions run](https://github.com/Hatblack2002/Sleeping_dogs-experiment/actions/runs/40230794634)
 
-The previously inspected APK contained a large `libnfsmw.so` and DXVK libraries. That is evidence of a native ARM64 library and a Direct3D-to-Vulkan component, but it does **not** identify the game code as Sleeping Dogs. The `nfsmw` name is a strong mismatch that requires explanation; library size, generated symbols, or DXVK presence cannot resolve it. Do not label that APK a verified Sleeping Dogs recompilation.
+## Interpretation
+
+The native activity, large AArch64 library, and guest-code/generated-function symbols are meaningful evidence for a static-recompilation-style application. DXVK is a graphics API translation layer; its presence alone does not show that game logic executes under Wine, Box64, or FEX. The static pass did not establish that such a compatibility runtime is present.
+
+The important unresolved mismatch is the main library's SONAME, `libnfsmw.so`. The name could be reused from another project, but there is no evidence yet that explains it. The audit did not find a clear `sdhdship.exe`, `HKShip`, or Bink marker proving the generated functions are from Sleeping Dogs: Definitive Edition.
+
+Therefore:
+- **Likely:** native ARM64 recompilation-style architecture.
+- **Not established:** exact game-code identity, author/source provenance, reproducible build, or successful gameplay.
+- **Not justified:** calling the APK a fake/wrapper based only on DXVK or the library name.
+
+## Public source status
+
+The author’s Reddit post says future releases and updates will be in a Discord server and provides a Google Drive download, but no canonical source repository or reproducible build pipeline was identified in the public GitHub searches performed. The claims about function counts and ARM64 translation remain author claims until source or build evidence is obtained.
+
+Source: https://www.reddit.com/r/AndroidNativePorts/comments/1x4ji39/finished_and_optimized_a_few_ports_of_different/
+
+## Target-device risk
+
+The author says Android 10+ 64-bit, roughly 17 GB free storage, and 8 GB RAM minimum (12 GB recommended) are needed; the reported tested devices are RedMagic 11S Pro and RedMagic 9 Pro. The Galaxy S20 FE SM-G781U has a Snapdragon 865 / Adreno 650 and Android 13, so its GPU/OS fit the stated family, but its approximately 5.76 GiB usable RAM is below the author's stated minimum. This is a risk to validate, not proof that it cannot run.
 
 ## Required verification sequence
 
-1. Obtain the exact APK and its SHA-256 from the author-controlled release, then preserve the digest in the audit.
-2. Inspect package metadata, every ABI library, ELF dependencies, exported symbols, and strings for `HKShip`, `sdhdship`, `bink2w64`, and game-specific resource names.
-3. Determine whether the APK expects a supplied native `.so`, imports retail files, launches a compatibility layer, or actually contains statically translated game code. DXVK alone does not prove runtime emulation, but its presence conflicts with a strict no-DXVK project requirement and must be traced.
-4. Locate and inspect the author’s canonical source repository and build instructions. A downloadable APK or Discord link is not a substitute for source.
-5. Reproduce a clean ARM64 build in GitHub Actions from lawful source. Keep proprietary game executables/assets out of this public repository.
-6. Install and test on the target Snapdragon 865 device; separately verify boot, asset loading, and gameplay. A CI compile or static report is not a gameplay test.
+1. Establish why the main library is named `libnfsmw.so`; trace the native startup and game-data loading path.
+2. Find the author’s canonical source/build pipeline and verify game version, generated-code provenance, dependencies, and rights.
+3. Reproduce a clean ARM64 build from lawful, verifiable source. Keep proprietary retail files out of the public repository.
+4. Install on the target Snapdragon 865 device and record installation, startup, data discovery, renderer initialization, first scene, input, sustained gameplay, save/load, memory, and thermal results separately.
 
 ## Decision
 
-Keep the community recompilation as the highest-priority lead, but **do not import its APK/library as the project implementation yet**. Do not cross-compile TheoryEngine as if it were a complete engine: the existing public tree is an incomplete, Windows/D3D11-oriented reverse-engineering reference with unresolved source-use rights. The next milestone is source/provenance verification, not another wrapper APK.
+Keep the reference APK as the highest-priority architectural lead. Do not import its binary as source implementation or claim a verified Sleeping Dogs port yet. The next milestone is source/provenance discovery and library/data-path tracing—not another wrapper APK.
