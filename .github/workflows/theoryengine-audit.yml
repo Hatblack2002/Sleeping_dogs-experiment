@@ -55,12 +55,12 @@ jobs:
 
       - name: Probe upstream umbrella header for Android ARM64 compatibility
         run: |
-          python scripts/probe_android_header.py \\
-            --compiler "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++" \\
-            --sysroot "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot" \\
-            --source "$RUNNER_TEMP/TheoryEngine" \\
+          python scripts/probe_android_header.py \
+            --compiler "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++" \
+            --sysroot "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot" \
+            --source "$RUNNER_TEMP/TheoryEngine" \
             --output android-header-probe.md
-          printf "\\n\\n---\\n\\n" >> audit-report.md
+          printf "\n\n---\n\n" >> audit-report.md
           cat android-header-probe.md >> audit-report.md
 
       - name: Print report in workflow logs
