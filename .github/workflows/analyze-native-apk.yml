@@ -1,11 +1,14 @@
 name: Analyze Android runner APK (native-port research)
 
 on:
+  push:
+    paths:
+      - ".github/workflows/analyze-native-apk.yml"
   workflow_dispatch:
     inputs:
       drive_url:
         description: "Google Drive share URL for the APK (viewer access must be enabled)"
-        required: true
+        required: false
         type: string
 
 permissions:
@@ -24,7 +27,7 @@ jobs:
 
       - name: Validate link and install tools
         env:
-          APK_URL: ${{ inputs.drive_url }}
+          APK_URL: ${{ inputs.drive_url || 'https://drive.google.com/file/d/1liG6WaY141AW_1kTx1Bj69sfviiSuyXJ/view?usp=drivesdk' }}
         run: |
           set -euo pipefail
           python3 -c 'import os; from urllib.parse import urlparse; u=urlparse(os.environ["APK_URL"]); assert u.scheme=="https" and u.hostname in {"drive.google.com","www.drive.google.com","drive.usercontent.google.com"}, "Use an HTTPS Google Drive share link"'
@@ -35,7 +38,7 @@ jobs:
 
       - name: Download and validate APK
         env:
-          APK_URL: ${{ inputs.drive_url }}
+          APK_URL: ${{ inputs.drive_url || 'https://drive.google.com/file/d/1liG6WaY141AW_1kTx1Bj69sfviiSuyXJ/view?usp=drivesdk' }}
         run: |
           set -euo pipefail
           gdown --fuzzy "$APK_URL" --output work/runner.apk
@@ -113,7 +116,8 @@ jobs:
             for p,txt in texts:
               for n,line in enumerate(txt.splitlines(),1):
                 if rx.search(line):
-                  hits.append(f"- {p.relative_to(jroot)}:{n}: {re.sub(r'\\s+',' ',line.strip())[:200]}")
+                  clean = re.sub(r'\s+', ' ', line.strip())[:200]
+                  hits.append(f"- {p.relative_to(jroot)}:{n}: {clean}")
                   if len(hits)>=20: break
               if len(hits)>=20: break
             lines += ["",f"## Indicators: {label}"] + (hits or ["- No matches in decompiled Java output"])
