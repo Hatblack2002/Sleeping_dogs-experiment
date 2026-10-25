@@ -1,62 +1,59 @@
 # Native Android route decision — Sleeping Dogs: Definitive Edition
 
 **Decision date:** 2026-10-25  
-**Target:** Android ARM64, directly executed native code. Winlator, Wine, Box64, DXVK, remote streaming, and a Windows launcher are explicitly out of scope.
+**Target:** Android ARM64 with directly executed native code. Wine, Winlator, Box64, FEX, DXVK-as-a-project-dependency, remote streaming, and a Windows launcher are out of scope.
+
+## User requirement
+
+The reference APK is for **study only**. The project must not depend on that APK or its binaries, and must not run the game through Wine/Winlator/Box64/FEX. The objective is a separately built, optimized Android ARM64 implementation.
 
 ## Decision
 
-The deliverable is a genuine native Android port, not a wrapper or a compatibility-layer launcher marketed as native. However, “native” does not mean the original game source must be present: a static recompilation can translate the original executable's functions into ARM64 machine code and load the user's legally owned game data at runtime. That is materially different from a container that runs the original Windows executable through Wine/Box64/DXVK.
+Pursue a reproducible native implementation from verified source or generated ARM64 recompilation output. The reference APK can inform the architecture, expected data import, lifecycle, graphics requirements, and performance test design, but it is not the source foundation and must not be treated as a runtime dependency.
 
-The community APK must be classified from evidence, not its branding. If it is a launcher/container that accepts retail game files and delegates execution to another runtime, it is not the implementation target. If it contains generated ARM64 code corresponding to the game's executable and directly executes it in-process, it may be a useful technical reference, but its APK alone is not a reproducible source foundation.
+A static recompilation can translate the target executable's functions ahead of time into ARM64 machine code; the resulting Android process executes that code directly while loading the user's legally owned game data. This differs from launching the original Windows executable through a compatibility runtime. We must verify the implementation's provenance and generated-code identity rather than trusting a label, APK size, or FPS claim.
 
-The project should pursue a reproducible native implementation from verified source or generated ARM64 recompilation output. Do not spend further effort on wrapper UI or treat an APK's large native library as proof of the game's identity.
+The user specifically excludes Wine/Box64 execution. DXVK is a graphics API translation layer, not by itself proof of Wine/Box64 execution; nevertheless, this project will **not adopt the reference APK's DXVK stack as a shortcut**. A native Android graphics boundary should be selected from the verified code available, preferably Vulkan if technically feasible, or OpenGL ES if the real source constraints justify it.
 
 ## Candidate assessment
 
-### A. Community static recompilation — highest-priority lead, not yet reproducible
+### A. Community static recompilation — research lead only, not a project dependency
 
-A newer Reddit post by `u/Lazy_Persimmon3059` states that the developer has a Sleeping Dogs: Definitive Edition Android build and says it is a **static recompilation** of `sdhdship.exe` and `bink2w64.dll`, not a Winlator/Wine/Box64/FEX launch. The author claims roughly 194,020 game functions were recompiled to ARM64, says the source is about 1.5 GB, and says a GitHub repository will be posted after optimization. These are the author's statements, not independently verified engineering evidence.
+A Reddit post by `u/Lazy_Persimmon3059` says the developer has an Android build and describes a static recompilation of `sdhdship.exe` and `bink2w64.dll`, with about 194,020 game functions translated to ARM64. These are author claims, not independently verified source-level facts.
 
-Source post: https://www.reddit.com/r/AndroidNativePorts/comments/1x4ji39/finished_and_optimized_a_few_ports_of_different/
+Source: https://www.reddit.com/r/AndroidNativePorts/comments/1x4ji39/finished_and_optimized_a_few_ports_of_different/
 
-The older DroidPorts entry still says there is no public source or download and has not reviewed the APK: https://droidports.com/games/sleeping-dogs-definitive-edition/. It may simply be stale relative to the newer announcement.
+The reference APK static audit found `NativeActivity`, a large ARM64 library named `libnfsmw.so`, guest-function-looking symbols, and bundled DXVK libraries. That evidence supports a likely static-recompilation-style architecture, but the library-name mismatch and absence of a canonical source/build pipeline remain unresolved. The APK is useful to study, not a binary dependency or a substitute for source.
 
-**Assessment:** This is now the strongest lead and is more promising than building from TheoryEngine. The right move is to locate the canonical GitHub repository when the developer publishes it, then inspect its build scripts and native libraries. Do not use APK mirrors or a prebuilt APK as a substitute for source inspection. A claimed static recompilation is not proven native merely by its name or reported FPS.
-
-**Verification gate:**
-1. Track the author's promised GitHub publication and identify the canonical repository; no matching public GitHub repository was found in this search pass as of 2026-10-25.
-2. Inspect source code, generated ARM64 code, build scripts, and dependencies; check for calls to Wine/Winlator/Box64/FEX or Windows binary launch paths.
-3. Inspect licensing/provenance and ensure no proprietary retail assets or executables are redistributed.
-4. Reproduce the ARM64 build in CI from source.
-5. Verify install, startup, game-data loading, and gameplay on hardware. The author's post lists RedMagic 9 Pro/11S Pro as tested and claims Adreno 6xx+ may work; it does not establish support for this project's Galaxy S20 FE Snapdragon 865.
-
-### B. SDmodding TheoryEngine — useful reverse-engineering reference, not a port foundation by itself
+### B. SDmodding TheoryEngine — research reference, not a port foundation by itself
 
 Upstream: https://github.com/SDmodding/TheoryEngine
 
-The upstream README describes a work-in-progress reverse-engineered reimplementation guided by the retail debug symbols, explicitly says it is not a complete rewrite, and states the project is no longer under active public development. Its repository says it has no license because some portions may be identical or similar to original code. Its umbrella header documents C++17 and a 64-bit x64 target; the current Android NDK probe in this repository fails on the Windows/Direct3D 11 include path.
+The upstream README describes a work-in-progress reverse-engineered reimplementation, not a complete rewrite. The public tree is primarily headers, Windows/D3D11/x64-oriented, has no conventional compiled source/build entry point, and states there is no license due to possible similarity with original code.
 
-**Assessment:** Use its public documentation and independently verified technical observations as research leads only. Do not assume its headers constitute a complete game engine, do not treat a header syntax check as a port, and do not copy or redistribute code without resolving the rights issue. A clean-room implementation can use lawful, independently gathered behavioural knowledge, but must not silently inherit unlicensed implementation code.
+Use lawful public documentation and independently verified behavioral observations as research leads only. Do not copy/redistribute unlicensed code or call a header probe a port.
 
-### C. Reimplement the engine from scratch — technically possible in principle, not a shortcut
+### C. Independent engine/reimplementation — fallback, not a shortcut
 
-A real native port needs far more than an Android Activity and a renderer: executable/game logic, resource and archive loading, scene/world streaming, animation, physics, AI, scripting, audio, UI, save state, platform services, and a rendering backend. Sleeping Dogs is a large 3D open-world game. Replacing all of this from scratch is a multi-stage engine project and cannot honestly be represented as a quick APK build.
-
-**Assessment:** Fallback only if a lawful, sufficiently complete engine/recompilation foundation cannot be obtained and the project accepts a long reverse-engineering/reimplementation programme.
+A complete implementation needs game logic, resource/archive loading, world streaming, animation, physics, AI, scripting, audio, UI, saves, Android lifecycle and rendering. This is a major reverse-engineering effort. It is viable only as a staged program with lawful inputs and clear milestone tests, not a quick empty JNI APK.
 
 ## Non-negotiable architecture
 
-- Native Android application package with an ARM64 native engine/runtime.
-- Vulkan or OpenGL ES backend only after the actual renderer and dependency path is identified.
-- The user's own legally acquired game files may be imported locally; proprietary game assets/executables must not be committed to this public repository.
-- CI must compile real native engine/recompilation code, not only Java/Kotlin, an empty JNI library, a header probe, or a launcher.
-- A build is not a playable port until it installs, starts, loads real game data, and reaches verified gameplay on the target device.
-- No Winlator/Wine/Box64/DXVK execution path.
+- Android APK with an ARM64 native process that directly executes the verified native game/recompiled code.
+- No Wine/Winlator/Box64/FEX, no Windows executable launched by a compatibility runtime, and no streaming.
+- Do not depend on the community APK or copy its binary libraries into the implementation.
+- Do not adopt DXVK as the project's graphics backend; implement/adapt a direct Android renderer at a verified API boundary.
+- The user's legally owned retail files may be imported locally; proprietary assets/executables must not be committed to this public repository unless redistribution rights are established.
+- CI must compile actual native project code and validate the produced ARM64 artifacts, not only package Java/Kotlin or an empty JNI stub.
+- A build is not a playable port until it installs, loads real game data, renders gameplay, and accepts input on the target device.
 
-## Evidence and limitations
+## Required gates
 
-- DroidPorts listing (unverified lead; no source or public download stated): https://droidports.com/games/sleeping-dogs-definitive-edition/
-- TheoryEngine repository and its own status/licensing statements: https://github.com/SDmodding/TheoryEngine
-- Native-port definition and distinction from emulation: https://github.com/abduznik/awesome-android-native-ports
+1. Verify lawful source and provenance for generated ARM64 code or define a lawful independent implementation route.
+2. Trace game-code identity, data loading, startup, platform APIs and renderer boundaries.
+3. Build a reproducible ARM64 Android target in CI without a Windows compatibility runtime.
+4. Establish target-device baseline measurements before optimization.
+5. Optimize measured bottlenecks, one subsystem at a time, and preserve before/after traces.
+6. Verify installation, startup, data discovery, rendering, gameplay, input, save/load, memory, and thermal behavior on the Galaxy S20 FE.
 
-This report records a route decision, not a claim that an Android port exists or that gameplay has been achieved. The next engineering step is to verify candidate A from a canonical maintainer/source. Do not fabricate a substitute APK if that gate fails.
+See [native optimization plan](OPTIMIZATION_PLAN.md) for the measurement-driven performance strategy.
