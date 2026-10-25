@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/theoryengine-audit.yml"
       - "scripts/audit_theoryengine.py"
+      - "scripts/probe_android_header.py"
       - "tests/**"
       - "README.md"
 
