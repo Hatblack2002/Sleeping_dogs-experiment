@@ -9,11 +9,12 @@
 - The upstream README describes TheoryEngine as a work-in-progress reverse-engineered reimplementation of the Sleeping Dogs: Definitive Edition engine based on released debug symbols. It explicitly says the project is not a complete rewrite.
 - The upstream umbrella header requires C++17 and describes the target as 64-bit x64. It hard-defines THEORY_WINDOWS and THEORY_PLATFORM_PC, includes Direct3D 11, and includes PC-specific process/string implementations.
 - The upstream README says the project has no license because parts may be identical or similar to the original game's code. This is a provenance and permission blocker for copying or redistributing the source.
-- GitHub Actions run #5 completed the audit and uploaded the report artifact; run #3 independently passed the regression tests. The latest scan examined 143 source/text files and detected 13 Direct3D 11 indicators, 3 Windows API/platform indicators, 9 x86/x64 indicators, 2 hard-coded PC platform defines, and zero CMake entry points. These are pattern-scan counts, not a complete dependency analysis.
+- The static audit scanned 143 source/text files and detected 13 Direct3D 11 indicators, 3 Windows API/platform indicators, 9 x86/x64 indicators, 2 hard-coded PC platform defines, and zero CMake entry points. These are pattern-scan counts, not a complete dependency analysis.
+- An Android NDK 27.2 C++17 syntax-only probe targeting aarch64-linux-android26 failed immediately at theory.hh:109 because d3d11.h is unavailable in the Android NDK. GitHub Actions records this compiler output in the audit artifact; the workflow itself succeeds so the failure remains visible as diagnostic evidence.
 
 ## Engineering conclusion
 
-Changing the compiler target to Android ARM64 is not enough. There is no upstream build configuration or conventional compiled source implementation to cross-compile in this tree. Even if the headers compile in isolation, that would not establish a functioning engine, asset loading, rendering, gameplay, or compatibility with retail game data.
+Changing the compiler target to Android ARM64 is not enough. The real NDK probe confirms the umbrella header cannot compile as-is because it unconditionally enables the PC platform path and includes d3d11.h. There is no upstream build configuration or conventional compiled source implementation to cross-compile in this tree. Even if the headers compile in isolation, that would not establish a functioning engine, asset loading, rendering, gameplay, or compatibility with retail game data.
 
 Do not copy TheoryEngine into this repository or ship a derivative build until source-use rights are clarified. The responsible next step is to investigate lawful, independently authored platform/rendering infrastructure and determine whether any separately licensed components can support a demonstrable Android proof of concept. Keep proprietary retail game data out of this public repository.
 
