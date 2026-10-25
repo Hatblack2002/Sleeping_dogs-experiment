@@ -2,47 +2,56 @@
 
 ## Product definition
 
-The target is a real Android ARM64 application that executes translated/recompiled game code directly on the device. It must not start a Windows compatibility container or merely hide a launcher behind a native-looking interface.
+Build a separately maintained Android ARM64 implementation that directly executes verified native game/recompiled code. It must not launch a Windows compatibility container or depend on the community APK's binaries.
 
-The original retail game assets and required user-supplied files may remain external and be imported locally. Their absence from the APK is not, by itself, evidence that the app is a container. The key distinction is what executes the game logic:
-- **Static recompilation:** functions from the original executable are translated ahead of time into ARM64 native machine code; the Android process calls that generated code and supplies the game data at runtime.
-- **Compatibility/container launcher:** the app launches or embeds a runtime that interprets/translates the original Windows executable, such as Wine/Box64 or a DXVK graphics path.
-- **Thin wrapper:** the app merely opens another installed app or runtime.
+The original retail game assets and required user-supplied files may be imported locally. Their absence from an APK does not by itself prove an app is a container. The key distinction is what executes the game logic:
+- **Static recompilation:** original executable functions are translated ahead of time into ARM64 native machine code; the Android process calls the generated code and loads user-supplied game data.
+- **Compatibility/container launcher:** the app launches or embeds a runtime such as Wine/Box64/FEX to execute the Windows binary.
+- **Thin wrapper:** the app opens another app/runtime.
 
-Only the first route is a candidate for the project's stated target. A Vulkan renderer or JNI library alone does not establish which architecture is present.
+Only a verified direct-native execution route is in scope. The reference APK is a study sample, not a dependency. Its large native library or symbols are not source code and do not prove exact game identity.
 
-## Work plan and decision gates
+## Architecture constraints
 
-### Gate 1 — Establish the actual community APK architecture
-1. Preserve the exact APK's SHA-256 and package/version metadata.
-2. Inventory all DEX, assets, and ABI libraries; inspect ELF dependencies, symbols, and strings.
-3. Trace startup from Android entry activity through JNI/native entry points to the game execution path.
-4. Look specifically for evidence of generated ARM64 code and game-specific executable symbols; distinguish this from a generic runtime library.
-5. Trace all references to Wine, Box64, FEX, DXVK, external app launches, and user-provided executable paths.
-6. Record conclusions as confirmed, contradicted, or unknown. Do not infer architecture from APK size, FPS claims, or a library name alone.
+- No Wine, Winlator, Box64, FEX, or Windows executable launch path.
+- Do not copy or depend on the community APK's `libnfsmw.so` or DXVK libraries.
+- Do not adopt DXVK as the project's renderer. Select a direct Android graphics backend after verifying the actual source boundary; prefer Vulkan if feasible, evaluate GLES only when justified.
+- No proprietary game files in the public repository without explicit redistribution rights.
+- CI must build real native ARM64 code, not an empty JNI stub or launcher.
 
-### Gate 2 — Obtain reproducible implementation inputs
-1. Locate the developer's canonical source repository or an explicit source release.
-2. Verify build scripts, generated-code provenance, dependencies, license/provenance, and supported game version.
-3. If the source is not public, do not represent reverse-engineering of a compiled APK as equivalent to obtaining a maintainable source base. A compiled APK can help characterize interfaces and required files, but cannot substitute for generated code and its build pipeline.
-4. Keep proprietary executable/assets out of the public repository; use CI secrets or a local import step only where legally appropriate.
+## Gates
 
-### Gate 3 — Build native Android integration
-1. Build real ARM64 game/recompiled code with Android NDK and a reproducible CI workflow.
-2. Implement Android platform services required by the codebase: lifecycle, storage/file access, audio, input/touch mapping, threading, and graphics presentation.
-3. Choose Vulkan/OpenGL ES based on the actual renderer boundary and available code, not by adding DXVK to an otherwise empty Android wrapper.
-4. Add automated build and artifact checks; fail CI if the job only packages Java/Kotlin or an empty JNI stub.
+### Gate 1 — Establish lawful source and code identity
+1. Locate the canonical source/build pipeline for the community static recompilation or determine a legally reviewed independent route.
+2. Verify game version, generated-code provenance, licensing/rights, and source completeness.
+3. Confirm the output is ARM64 machine code executed in-process.
+4. Characterize game data formats and required user-supplied files without publishing proprietary data.
 
-### Gate 4 — Validate on the target device
-Test in sequence: APK installation, process startup, data discovery, renderer initialization, first scene, input, sustained gameplay, save/load, and thermal/memory stability. Report each stage separately. Do not call the port playable until actual gameplay has been observed on hardware.
+### Gate 2 — Design the Android-native platform boundary
+1. Map lifecycle, file access, audio, input/touch, threading, storage and graphics APIs.
+2. Implement only APIs required by the verified code path; don't create speculative stubs for an unknown engine.
+3. Establish a direct Android renderer boundary. Avoid a D3D11-to-Vulkan translation stack as the default plan.
+4. Add structured diagnostics for startup, asset discovery, renderer creation, and fatal errors.
 
-## Current known blockers
+### Gate 3 — Build and test
+1. Build actual ARM64 code with Android NDK and reproducible CI.
+2. Verify APK ABI, linked libraries, unresolved symbols, and forbidden runtime dependencies.
+3. Run automated native startup/smoke tests where feasible.
+4. Keep the user's retail files local and test data discovery against their known version.
 
-- The public TheoryEngine repository is an incomplete Windows/D3D11-oriented reverse-engineering reference, not a complete Android-ready engine.
-- The community's claimed static recompilation remains unverified at source/build level.
-- The earlier APK audit's `libnfsmw.so` and DXVK libraries do not prove that it contains Sleeping Dogs game code. Its architecture must be traced.
-- The project has no verified native APK or target-device gameplay test yet.
+### Gate 4 — Baseline and optimize
+Use repeatable measurements on the Galaxy S20 FE: startup stages, frame-time percentiles, CPU/GPU utilization, memory peaks, asset I/O, stalls, thermal behavior and correctness. Optimize measured hot paths, one subsystem per change, and record before/after results. The detailed procedure is in [OPTIMIZATION_PLAN.md](OPTIMIZATION_PLAN.md).
+
+### Gate 5 — Device acceptance
+Test APK installation, process startup, game-data discovery, renderer initialization, first scene, touch/gamepad input, sustained gameplay, audio, save/load, low-memory behavior and thermal stability. Do not call it playable until gameplay is observed on hardware.
+
+## Current blockers
+
+- The reference APK looks consistent with static recompilation but its `libnfsmw.so` naming mismatch is unexplained.
+- No canonical public source repository or reproducible source/build pipeline has been verified.
+- TheoryEngine is incomplete, Windows/D3D11/x64-oriented, and has unresolved source-use rights.
+- No native game APK built from verified source or gameplay test exists yet.
 
 ## Immediate next action
 
-Use the exact APK supplied by the user as an evidence sample, trace its startup and native execution path, and classify it. Then pursue the canonical source/build pipeline for a true static recompilation. Do not create another launcher APK as a substitute for the native engine.
+Continue source/provenance discovery and define the independently built ARM64 code path. Use the reference APK only to understand expected architecture and behavior; do not build on its binary or introduce Wine/Box64/DXVK as runtime dependencies.
