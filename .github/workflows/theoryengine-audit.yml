@@ -1,0 +1,48 @@
+name: TheoryEngine feasibility audit
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/theoryengine-audit.yml"
+      - "scripts/audit_theoryengine.py"
+      - "README.md"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout experiment
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch public upstream for temporary analysis
+        run: git clone --depth 1 https://github.com/SDmodding/TheoryEngine.git "$RUNNER_TEMP/TheoryEngine"
+
+      - name: Record upstream revision
+        id: upstream
+        working-directory: ${{ runner.temp }}/TheoryEngine
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Scan platform assumptions and licensing signals
+        run: |
+          python scripts/audit_theoryengine.py \
+            --source "$RUNNER_TEMP/TheoryEngine" \
+            --output audit-report.md \
+            --revision "${{ steps.upstream.outputs.sha }}"
+
+      - name: Publish audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sleeping-dogs-feasibility-audit
+          path: audit-report.md
+          if-no-files-found: error
+          retention-days: 30
