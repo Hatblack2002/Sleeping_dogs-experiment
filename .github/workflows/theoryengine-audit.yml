@@ -45,6 +45,9 @@ jobs:
             --output audit-report.md \
             --revision "${{ steps.upstream.outputs.sha }}"
 
+      - name: Print report in workflow logs
+        run: cat audit-report.md
+
       - name: Publish audit report
         uses: actions/upload-artifact@v4
         with:
