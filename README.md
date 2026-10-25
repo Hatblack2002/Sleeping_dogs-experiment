@@ -32,3 +32,12 @@ Upstream: https://github.com/SDmodding/TheoryEngine
 - [COMPATIBILITY_ROUTE.md](docs/COMPATIBILITY_ROUTE.md): separate Windows-compatibility route and test plan.
 
 The scheduled audit, NDK probe, and regression tests run through GitHub Actions. Compatibility/emulation is not a native port, and no APK or playable result is claimed until it has been built and tested on hardware.
+
+
+## Android launcher prototype
+
+A first Java-based Android launcher prototype now exists in [`android-wrapper/`](android-wrapper/). It builds a debug APK in the **Android compatibility app build** workflow. The app checks for common Winlator package IDs and opens Winlator; if absent, it opens the official release page.
+
+This is a real compile-tested APK artifact, **not the game itself** and not a native Sleeping Dogs port. It does not bundle Winlator, proprietary game data, or an automatic `HKShip.exe` launch integration. The next engineering gate is testing installation and the Winlator hand-off on Android, then validating the actual game launch separately.
+
+Latest build artifact: [Android compatibility app build #10](https://github.com/Hatblack2002/Sleeping_dogs-experiment/actions/runs/40229201754). Open the run page and download `sleeping-dogs-android-wrapper-debug` under **Artifacts** (available for 14 days).
