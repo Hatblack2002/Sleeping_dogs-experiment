@@ -1,0 +1,136 @@
+name: Analyze Android runner APK (native-port research)
+
+on:
+  workflow_dispatch:
+    inputs:
+      drive_url:
+        description: "Google Drive share URL for the APK (viewer access must be enabled)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Validate link and install tools
+        env:
+          APK_URL: ${{ inputs.drive_url }}
+        run: |
+          set -euo pipefail
+          python3 -c 'import os; from urllib.parse import urlparse; u=urlparse(os.environ["APK_URL"]); assert u.scheme=="https" and u.hostname in {"drive.google.com","www.drive.google.com","drive.usercontent.google.com"}, "Use an HTTPS Google Drive share link"'
+          sudo apt-get update
+          sudo apt-get install -y apktool unzip file binutils jq python3-pip
+          python3 -m pip install --break-system-packages gdown
+          mkdir -p work report
+
+      - name: Download and validate APK
+        env:
+          APK_URL: ${{ inputs.drive_url }}
+        run: |
+          set -euo pipefail
+          gdown --fuzzy "$APK_URL" --output work/runner.apk
+          test -s work/runner.apk
+          size=$(stat -c%s work/runner.apk)
+          test "$size" -le 2147483648 || { echo "APK exceeds 2 GiB limit"; exit 1; }
+          file work/runner.apk
+          unzip -tq work/runner.apk
+          sha256sum work/runner.apk | tee report/apk-sha256.txt
+
+      - name: Install JADX
+        run: |
+          set -euo pipefail
+          url=$(curl -fsSL https://api.github.com/repos/skylot/jadx/releases/latest | jq -r '[.assets[] | select(.name | test("^jadx-[0-9].*\\.zip$"))][0].browser_download_url')
+          test -n "$url" && test "$url" != "null"
+          curl -fsSL "$url" -o /tmp/jadx.zip
+          mkdir -p /opt/jadx
+          unzip -q /tmp/jadx.zip -d /opt/jadx
+          bin=$(find /opt/jadx -type f -path '*/bin/jadx' -print -quit)
+          test -n "$bin"
+          echo "JADX_BIN=$bin" >> "$GITHUB_ENV"
+
+      - name: Decode and decompile
+        run: |
+          set -euo pipefail
+          apktool d -f work/runner.apk -o work/apktool
+          "$JADX_BIN" --show-bad-code -d work/jadx work/runner.apk 2>&1 | tee report/jadx.log
+          find work/apktool/lib -type f -name '*.so' -print 2>/dev/null | sort > report/native-libraries.txt || true
+          find work/jadx/sources -type f -name '*.java' 2>/dev/null | sort > report/java-files.txt || true
+
+      - name: Generate static analysis report
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root=Path("work")
+          out=Path("report/native-port-audit.md")
+          digest=Path("report/apk-sha256.txt").read_text().split()[0]
+          lines=["# Android runner APK — static analysis","","> Static inspection only; this does not prove native gameplay.","", "## APK identity",f"- SHA-256: {digest}"]
+          mf=root/"apktool"/"AndroidManifest.xml"
+          if mf.exists():
+            try:
+              m=ET.parse(mf).getroot(); a="{http://schemas.android.com/apk/res/android}"
+              sdk=next((e for e in m if e.tag.endswith("uses-sdk")),None)
+              lines += [f"- Package: {m.attrib.get('package','unknown')}",f"- Version: {m.attrib.get(a+'versionName','unknown')} ({m.attrib.get(a+'versionCode','unknown')})",f"- Minimum SDK: {sdk.attrib.get(a+'minSdkVersion','unspecified') if sdk is not None else 'unspecified'}",f"- Target SDK: {sdk.attrib.get(a+'targetSdkVersion','unspecified') if sdk is not None else 'unspecified'}","", "## Permissions"]
+              perms=sorted({e.attrib.get(a+'name','?') for e in m if e.tag.endswith('uses-permission') or e.tag.endswith('uses-permission-sdk-23')})
+              lines += [f"- {p}" for p in perms] or ["- None found"]
+              lines += ["","## Android components"]
+              for e in m.iter():
+                tag=e.tag.split("}")[-1]
+                if tag in ("activity","activity-alias","service","receiver","provider"):
+                  lines.append(f"- {tag}: {e.attrib.get(a+'name','?')} (exported={e.attrib.get(a+'exported','unspecified')})")
+            except Exception as exc: lines.append(f"Manifest parse warning: {exc}")
+          libs=Path("report/native-libraries.txt").read_text().splitlines()
+          lines += ["","## Bundled native libraries"]
+          lines += [f"- {Path(p).relative_to(root/'apktool')} ({Path(p).stat().st_size} bytes)" for p in libs] or ["- No .so files found"]
+          jroot=root/"jadx"/"sources"
+          files=list(jroot.rglob("*.java")) if jroot.exists() else []
+          lines += ["","## Decompilation coverage",f"- Java files emitted: {len(files)}"]
+          patterns={
+            "JNI/native loading":r'\bnative\s+\w+|System\.loadLibrary|JNI_OnLoad|Java_[A-Za-z0-9_]+',
+            "Graphics APIs":r'Vulkan|vkCreateInstance|OpenGL|GLES|EGL|SurfaceView|TextureView',
+            "Engine/framework":r'SDL2?|UnityPlayer|Unreal|Godot|gameActivity',
+            "Compatibility/emulation":r'Winlator|Wine|Box64|FEX|DXVK|proot|qemu',
+            "Game executable/data loading":r'HKShip|sdhdship|bink2w64|\.drs\b|\.pak\b|\.obb\b|AssetManager|nativeLibraryDir',
+            "Process/dynamic loading":r'ProcessBuilder|Runtime\.getRuntime\(\)\.exec|dlopen|execve'}
+          texts=[]
+          for p in files:
+            try: texts.append((p,p.read_text(errors="ignore")))
+            except OSError: pass
+          for label,pat in patterns.items():
+            rx=re.compile(pat,re.I); hits=[]
+            for p,txt in texts:
+              for n,line in enumerate(txt.splitlines(),1):
+                if rx.search(line):
+                  hits.append(f"- {p.relative_to(jroot)}:{n}: {re.sub(r'\\s+',' ',line.strip())[:200]}")
+                  if len(hits)>=20: break
+              if len(hits)>=20: break
+            lines += ["",f"## Indicators: {label}"] + (hits or ["- No matches in decompiled Java output"])
+          lines += ["","## Notes","- A .so file or JNI call does not prove the entire game engine is native.","- A Java app may still launch an external compatibility layer; inspect process calls and bundled libraries together.","- JADX can fail to reconstruct some methods; missing output is not proof that code is absent.","- For safety, only this report and file inventories are uploaded. APK and decompiled source stay in the runner and are not published as artifacts.","","## Inventories",f"- Java file list: report/java-files.txt ({len(files)} entries)","- Native library list: report/native-libraries.txt","- JADX log: report/jadx.log"]
+          out.write_text("\n".join(lines)+"\n")
+          PY
+          cat report/native-port-audit.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report only
+        uses: actions/upload-artifact@v4
+        with:
+          name: sleeping-dogs-native-apk-audit
+          path: |
+            report/native-port-audit.md
+            report/apk-sha256.txt
+            report/native-libraries.txt
+            report/java-files.txt
+            report/jadx.log
+          retention-days: 3
+          if-no-files-found: error
