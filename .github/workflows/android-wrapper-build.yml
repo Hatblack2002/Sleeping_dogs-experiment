@@ -28,7 +28,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -36,15 +40,9 @@ jobs:
       - name: Install Android platform and build tools
         run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Validate Gradle wrapper
-        run: |
-          test -f android-wrapper/gradlew
-          test -f android-wrapper/gradle/wrapper/gradle-wrapper.properties
-          chmod +x android-wrapper/gradlew
-
       - name: Assemble debug APK
         working-directory: android-wrapper
-        run: ./gradlew --no-daemon --stacktrace assembleDebug
+        run: gradle --no-daemon --stacktrace assembleDebug
 
       - name: Verify APK exists
         run: |
