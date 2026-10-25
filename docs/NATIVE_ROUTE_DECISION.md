@@ -11,20 +11,22 @@ If that lead cannot be verified, the current public code does not provide a prac
 
 ## Candidate assessment
 
-### A. Community static recompilation claim — investigate first, do not trust yet
+### A. Community static recompilation — highest-priority lead, not yet reproducible
 
-DroidPorts lists a Sleeping Dogs: Definitive Edition “Android Native Port” and describes it as an alpha/static recompilation requiring the user's own PC game files, including `HKShip.exe`. The same page explicitly says there is **no public download**, no public source code, and that the listing has not been reviewed by DroidPorts.
+A newer Reddit post by `u/Lazy_Persimmon3059` states that the developer has a Sleeping Dogs: Definitive Edition Android build and says it is a **static recompilation** of `sdhdship.exe` and `bink2w64.dll`, not a Winlator/Wine/Box64/FEX launch. The author claims roughly 194,020 game functions were recompiled to ARM64, says the source is about 1.5 GB, and says a GitHub repository will be posted after optimization. These are the author's statements, not independently verified engineering evidence.
 
-Source: https://droidports.com/games/sleeping-dogs-definitive-edition/
+Source post: https://www.reddit.com/r/AndroidNativePorts/comments/1x4ji39/finished_and_optimized_a_few_ports_of_different/
 
-**Assessment:** Potentially the shortest path *if and only if* an authentic maintainer, source repository, build instructions, or verifiable release can be located. The directory entry alone does not establish that the project exists in a reproducible form, that it supports the target device, or that it is safe. Do not download APKs from mirrors or build a project around an anonymous claim.
+The older DroidPorts entry still says there is no public source or download and has not reviewed the APK: https://droidports.com/games/sleeping-dogs-definitive-edition/. It may simply be stale relative to the newer announcement.
+
+**Assessment:** This is now the strongest lead and is more promising than building from TheoryEngine. The right move is to locate the canonical GitHub repository when the developer publishes it, then inspect its build scripts and native libraries. Do not use APK mirrors or a prebuilt APK as a substitute for source inspection. A claimed static recompilation is not proven native merely by its name or reported FPS.
 
 **Verification gate:**
-1. Identify the actual maintainer and canonical project page.
-2. Find source code or a signed/canonical release and build instructions.
-3. Verify the code performs static recompilation/native ARM64 execution rather than calling a Windows compatibility layer.
-4. Inspect licensing/provenance and required PC files.
-5. Reproduce the ARM64 build in CI, then test startup and gameplay on hardware.
+1. Track the author's promised GitHub publication and identify the canonical repository; no matching public GitHub repository was found in this search pass as of 2026-10-25.
+2. Inspect source code, generated ARM64 code, build scripts, and dependencies; check for calls to Wine/Winlator/Box64/FEX or Windows binary launch paths.
+3. Inspect licensing/provenance and ensure no proprietary retail assets or executables are redistributed.
+4. Reproduce the ARM64 build in CI from source.
+5. Verify install, startup, game-data loading, and gameplay on hardware. The author's post lists RedMagic 9 Pro/11S Pro as tested and claims Adreno 6xx+ may work; it does not establish support for this project's Galaxy S20 FE Snapdragon 865.
 
 ### B. SDmodding TheoryEngine — useful reverse-engineering reference, not a port foundation by itself
 
