@@ -41,7 +41,7 @@ jobs:
           APK_URL: ${{ inputs.drive_url || 'https://drive.google.com/file/d/1liG6WaY141AW_1kTx1Bj69sfviiSuyXJ/view?usp=drivesdk' }}
         run: |
           set -euo pipefail
-          gdown --fuzzy "$APK_URL" --output work/runner.apk
+          gdown "$APK_URL" --output work/runner.apk
           test -s work/runner.apk
           size=$(stat -c%s work/runner.apk)
           test "$size" -le 2147483648 || { echo "APK exceeds 2 GiB limit"; exit 1; }
