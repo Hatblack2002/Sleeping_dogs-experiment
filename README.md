@@ -1,43 +1,26 @@
-# Sleeping Dogs Android experiment
+# Sleeping Dogs — native Android port experiment
 
-Research and build-feasibility workspace for evaluating whether the Sleeping Dogs: Definitive Edition engine can be adapted to Android ARM64.
+This repository targets a **native Android ARM64 implementation**. Winlator, Wine, Box64, DXVK, and launching the Windows game are outside the deliverable.
 
-## Current objective
+## Current state
 
-Produce reproducible evidence before attempting a game port:
+- The public TheoryEngine repository is an incomplete reverse-engineered reference, not the original complete game engine.
+- Its public tree does not provide a complete buildable game implementation or the proprietary retail assets.
+- The previous `android-wrapper/` launcher was a mistaken detour: it merely opened Winlator and did not run the game natively. Do not treat its APK as a project deliverable.
+- No native game APK, playable build, or successful device test is currently available.
 
-1. Inspect the public TheoryEngine reimplementation and its platform assumptions.
-2. Record licensing/provenance constraints before copying or adapting any code.
-3. Inventory Windows/D3D11/x64-specific dependencies and likely porting boundaries.
-4. Run the audit in GitHub Actions and publish the report as a workflow artifact.
-5. Evaluate Windows compatibility/emulation as a separate, potentially more practical route.
+## Native implementation gates
 
-## Important limitations
+1. Establish a legally usable, complete engine/source foundation and document provenance.
+2. Identify the actual gameplay, simulation, resource-loading, and rendering implementations required to run the game.
+3. Build a minimal Android ARM64 native target with the Android NDK from real engine code—not a launcher or placeholder.
+4. Add a renderer backend compatible with Android (Vulkan or GLES as supported by the actual engine), then integrate input, audio, assets, and lifecycle.
+5. Produce an installable APK in CI and verify it installs, launches, and reaches real gameplay on target hardware.
 
-- This repository does **not** contain Sleeping Dogs game data, executables, PDB files, or other proprietary assets.
-- TheoryEngine is an archived reverse-engineered reimplementation, not the original engine source. Its upstream repository states that it has no license because some code may resemble the original. Treat it as research/reference material unless permission and licensing are clarified.
-- An audit report is not an Android port. No APK or gameplay support is claimed until an actual implementation is built and tested.
-- The user's legally obtained game files must remain separate; do not upload proprietary game data to this public repository.
+## Existing research
 
-## First experiment
+- [Native feasibility gate](docs/FEASIBILITY_GATE.md)
+- [Renderer/platform audit](docs/RENDERER_PLATFORM_AUDIT.md)
+- [Compatibility research (not the target deliverable)](docs/COMPATIBILITY_ROUTE.md)
 
-Open **Actions → TheoryEngine feasibility audit → Run workflow**. The workflow clones the public upstream into the temporary runner, scans platform and build assumptions, and uploads a Markdown report. It does not commit upstream source into this repository.
-
-Upstream: https://github.com/SDmodding/TheoryEngine
-
-## Current feasibility result
-
-- [FEASIBILITY_GATE.md](docs/FEASIBILITY_GATE.md): evidence-based native-port gates.
-- [RENDERER_PLATFORM_AUDIT.md](docs/RENDERER_PLATFORM_AUDIT.md): renderer, OS, and game-integration boundaries.
-- [COMPATIBILITY_ROUTE.md](docs/COMPATIBILITY_ROUTE.md): separate Windows-compatibility route and test plan.
-
-The scheduled audit, NDK probe, and regression tests run through GitHub Actions. Compatibility/emulation is not a native port, and no APK or playable result is claimed until it has been built and tested on hardware.
-
-
-## Android launcher prototype
-
-A first Java-based Android launcher prototype now exists in [`android-wrapper/`](android-wrapper/). It builds a debug APK in the **Android compatibility app build** workflow. The app checks for common Winlator package IDs and opens Winlator; if absent, it opens the official release page.
-
-This is a real compile-tested APK artifact, **not the game itself** and not a native Sleeping Dogs port. It does not bundle Winlator, proprietary game data, or an automatic `HKShip.exe` launch integration. The next engineering gate is testing installation and the Winlator hand-off on Android, then validating the actual game launch separately.
-
-Latest build artifact: [Android compatibility app build #10](https://github.com/Hatblack2002/Sleeping_dogs-experiment/actions/runs/40229201754). Open the run page and download `sleeping-dogs-android-wrapper-debug` under **Artifacts** (available for 14 days).
+The native build is not considered successful until CI compiles actual native engine implementation code. A successful Android wrapper build or static audit does not satisfy this requirement.
