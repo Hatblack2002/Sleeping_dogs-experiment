@@ -1,0 +1,60 @@
+name: Android compatibility app build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android-wrapper/**'
+      - '.github/workflows/android-wrapper-build.yml'
+  pull_request:
+    paths:
+      - 'android-wrapper/**'
+      - '.github/workflows/android-wrapper-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform and build tools
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Validate Gradle wrapper
+        run: |
+          test -f android-wrapper/gradlew
+          test -f android-wrapper/gradle/wrapper/gradle-wrapper.properties
+          chmod +x android-wrapper/gradlew
+
+      - name: Assemble debug APK
+        working-directory: android-wrapper
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Verify APK exists
+        run: |
+          test -s android-wrapper/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum android-wrapper/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sleeping-dogs-android-wrapper-debug
+          path: android-wrapper/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
