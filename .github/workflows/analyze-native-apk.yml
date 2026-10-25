@@ -79,7 +79,7 @@ jobs:
               echo "### NEEDED / SONAME"
               readelf -d "$lib" 2>&1 | grep -E 'NEEDED|SONAME|RPATH|RUNPATH' || true
               echo "### Exported symbols (first 120)"
-              readelf -Ws "$lib" 2>/dev/null | awk '$4=="FUNC" && $7!="UND" {print $8}' | sort -u | head -120
+              readelf -Ws "$lib" 2>/dev/null | awk '$4=="FUNC" && $7!="UND" {print $8}' | sort -u | sed -n '1,120p'
             done < report/native-libraries.txt
           } > report/elf-analysis.txt
           {
@@ -87,7 +87,7 @@ jobs:
             while IFS= read -r lib; do
               echo
               echo "## $lib"
-              strings -a "$lib" | grep -Ei 'sleeping dogs|sdhdship|hkship|true crime|united front|square enix|bink2w64|dxvk|wine|box64|fex|winlator|direct3d|d3d11|vulkan|renderer|game.?data|\.drs|\.pak|\.exe|\.dll|error|version' | head -250 || true
+              strings -a "$lib" | grep -Ei 'sleeping dogs|sdhdship|hkship|true crime|united front|square enix|bink2w64|dxvk|wine|box64|fex|winlator|direct3d|d3d11|vulkan|renderer|game.?data|\.drs|\.pak|\.exe|\.dll|error|version' | sed -n '1,250p' || true
             done < report/native-libraries.txt
           } > report/native-string-indicators.txt
 
