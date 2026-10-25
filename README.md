@@ -1,36 +1,44 @@
 # Sleeping Dogs — native Android port experiment
 
-This repository targets a **native Android ARM64 implementation**. The objective is not to disguise a container or launcher as a native app; the project must execute game logic compiled/recompiled for ARM64 on Android.
+This repository targets a **separately built, optimized native Android ARM64 implementation**. The reference APK is for architectural study only; it is not a runtime dependency or the implementation base.
 
-## Current state
+## Hard architecture rules
 
-- The public TheoryEngine repository is an incomplete reverse-engineered reference, not the original complete game engine.
-- A reference Android APK has now been statically inspected. Its `NativeActivity`, large AArch64 library, and generated-looking guest-function symbols support a **likely static-recompilation-style architecture**. Its main library is named `libnfsmw.so`, however, and the audit did not prove that the generated code belongs to Sleeping Dogs: Definitive Edition.
-- The APK bundles DXVK D3D11/DXGI libraries and a Freedreno Vulkan driver. DXVK alone does not prove game logic is executed through Wine/Box64/FEX; its actual role must be traced against the project's graphics requirements.
+- The game logic must execute as native ARM64 code in the Android process.
+- **No Wine, Winlator, Box64, or FEX.** No Windows executable launched through a compatibility runtime, and no remote streaming.
+- Do not copy or depend on the reference APK's `libnfsmw.so` or bundled DXVK libraries.
+- Do not adopt DXVK as the project's renderer. Select a direct Android graphics backend after the actual native code/API boundary is verified.
+- User-owned retail game files may be imported locally. Do not commit proprietary game assets/executables to this public repository without redistribution rights.
+- CI must compile real native project code; an empty JNI library or launcher is not a deliverable.
+
+## Current evidence and status
+
+- A reference Android APK has been statically inspected. Its `NativeActivity`, large AArch64 library, and generated-looking guest-function symbols are consistent with a **likely static-recompilation-style architecture**. Its main library is named `libnfsmw.so`; the audit did not prove that its generated code belongs to Sleeping Dogs: Definitive Edition.
+- The APK bundles DXVK D3D11/DXGI libraries and a Freedreno Vulkan driver. This is useful to understand the reference's graphics route, but the project will not inherit those binaries or depend on that stack.
 - No canonical source repository or reproducible source/build pipeline for the community build has been verified.
-- No native game APK built from verified source, playable build produced by this repository, or successful target-device gameplay test is currently available.
-- The target Galaxy S20 FE has Snapdragon 865 / Adreno 650 and Android 13, but its approximately 5.76 GiB usable RAM is below the reference author's stated 8 GB minimum. This is a risk to test, not a proven incompatibility.
+- No native game APK built from verified source or successful target-device gameplay test currently exists in this repository.
+- The Galaxy S20 FE has Snapdragon 865 / Adreno 650 and Android 13, but its approximately 5.76 GiB usable RAM is below the reference author's stated 8 GB minimum. This is a risk to measure, not proof of incompatibility.
 
-## Next gates
+## Work plan
 
-1. Resolve the `libnfsmw.so` naming mismatch and trace the native library's startup and game-data loading.
-2. Obtain and verify the author's canonical source/build pipeline, game version, generated-code provenance, and relevant rights.
-3. Build real ARM64 game/recompilation code reproducibly with Android NDK/CI; do not substitute an empty JNI stub or a launcher.
-4. Keep proprietary retail game files out of this public repository unless redistribution rights are established.
-5. Test installation, launch, data discovery, renderer initialization, first scene, touch/gamepad input, sustained gameplay, save/load, memory pressure, and thermal behavior on the target device.
+1. Resolve source/provenance and verify the target game-code identity.
+2. Establish an independent, reproducible ARM64 build path without Windows compatibility runtimes.
+3. Integrate the required Android-native lifecycle, storage, input, audio, and graphics services.
+4. Establish repeatable performance baselines, then optimize measured CPU, GPU, memory, I/O, and thermal bottlenecks.
+5. Verify installation, game-data discovery, renderer initialization, real gameplay, input, save/load, memory, and thermal stability on the target device.
 
-## Evidence and research
+## Documentation
 
 - [Reference APK static audit — 2026-10-25](docs/REFERENCE_APK_AUDIT_2026-10-25.md)
 - [Community recompilation verification status](docs/COMMUNITY_RECOMP_STATUS.md)
-- [Native route decision and candidate verification plan](docs/NATIVE_ROUTE_DECISION.md)
-- [Native implementation strategy and architecture gates](docs/NATIVE_IMPLEMENTATION_STRATEGY.md)
+- [Native route decision](docs/NATIVE_ROUTE_DECISION.md)
+- [Native implementation strategy](docs/NATIVE_IMPLEMENTATION_STRATEGY.md)
+- [Native optimization and benchmarking plan](docs/OPTIMIZATION_PLAN.md)
 - [Native feasibility gate](docs/FEASIBILITY_GATE.md)
 - [Renderer/platform audit](docs/RENDERER_PLATFORM_AUDIT.md)
-- [Compatibility research (not the target deliverable)](docs/COMPATIBILITY_ROUTE.md)
 
 ## Static APK audit automation
 
-The [Analyze Android runner APK workflow](.github/workflows/analyze-native-apk.yml) downloads a Google Drive APK share link, decodes Android resources with Apktool, decompiles DEX bytecode with JADX, inventories native libraries, and reports ELF dependencies, exported symbols, and selected strings. It publishes the analysis report and inventories only, not the APK or reconstructed source. Static findings are evidence for manual review; they do not establish source provenance or prove gameplay.
+The [Analyze Android runner APK workflow](.github/workflows/analyze-native-apk.yml) downloads a Google Drive APK share link, decodes Android resources with Apktool, decompiles DEX bytecode with JADX, inventories native libraries, and reports ELF dependencies, exported symbols, and selected strings. It publishes analysis reports and inventories only, not the APK or reconstructed source. Static findings do not establish source provenance or prove gameplay.
 
 To run it: open **Actions → Analyze Android runner APK (native-port research) → Run workflow**, then supply an accessible Google Drive share URL if the default link is no longer valid.
