@@ -28,7 +28,9 @@ jobs:
           python-version: "3.12"
 
       - name: Test audit tooling
-        run: python -m unittest discover -s tests -v
+        run: |
+          python -m py_compile scripts/audit_theoryengine.py scripts/probe_android_header.py
+          python -m unittest discover -s tests -v
 
       - name: Fetch public upstream for temporary analysis
         run: git clone --depth 1 https://github.com/SDmodding/TheoryEngine.git "$RUNNER_TEMP/TheoryEngine"
@@ -44,6 +46,22 @@ jobs:
             --source "$RUNNER_TEMP/TheoryEngine" \
             --output audit-report.md \
             --revision "${{ steps.upstream.outputs.sha }}"
+
+      - name: Set up Android NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install pinned Android NDK
+        run: sdkmanager "ndk;27.2.12479018"
+
+      - name: Probe upstream umbrella header for Android ARM64 compatibility
+        run: |
+          python scripts/probe_android_header.py \\
+            --compiler "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++" \\
+            --sysroot "$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot" \\
+            --source "$RUNNER_TEMP/TheoryEngine" \\
+            --output android-header-probe.md
+          printf "\\n\\n---\\n\\n" >> audit-report.md
+          cat android-header-probe.md >> audit-report.md
 
       - name: Print report in workflow logs
         run: cat audit-report.md
