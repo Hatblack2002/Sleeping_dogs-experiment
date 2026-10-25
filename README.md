@@ -27,4 +27,4 @@ Upstream: https://github.com/SDmodding/TheoryEngine
 
 ## Current feasibility result
 
-See docs/FEASIBILITY_GATE.md for evidence-based findings from the upstream tree and current engineering blockers. The scheduled audit and regression tests run through GitHub Actions.
+See docs/FEASIBILITY_GATE.md for evidence-based findings and docs/RENDERER_PLATFORM_AUDIT.md for the concrete renderer, OS, and game-integration boundaries. The scheduled audit, NDK probe, and regression tests run through GitHub Actions.
