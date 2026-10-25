@@ -23,3 +23,8 @@ Produce reproducible evidence before attempting a game port:
 Open **Actions → TheoryEngine feasibility audit → Run workflow**. The workflow clones the public upstream into the temporary runner, scans platform and build assumptions, and uploads a Markdown report. It does not commit upstream source into this repository.
 
 Upstream: https://github.com/SDmodding/TheoryEngine
+
+
+## Current feasibility result
+
+See docs/FEASIBILITY_GATE.md for evidence-based findings from the upstream tree and current engineering blockers. The scheduled audit and regression tests run through GitHub Actions.
