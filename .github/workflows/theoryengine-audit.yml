@@ -2,10 +2,13 @@ name: TheoryEngine feasibility audit
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "17 8 * * 1"
   push:
     paths:
       - ".github/workflows/theoryengine-audit.yml"
       - "scripts/audit_theoryengine.py"
+      - "tests/**"
       - "README.md"
 
 permissions:
@@ -23,6 +26,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Test audit tooling
+        run: python -m unittest discover -s tests -v
 
       - name: Fetch public upstream for temporary analysis
         run: git clone --depth 1 https://github.com/SDmodding/TheoryEngine.git "$RUNNER_TEMP/TheoryEngine"
