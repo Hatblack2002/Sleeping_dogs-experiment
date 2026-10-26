@@ -13,6 +13,8 @@ import android.view.Window;
 import android.view.WindowManager;
 
 public final class MainActivity extends Activity {
+    static { System.loadLibrary("nativeprobe"); }
+    private static native String vulkanProbe();
     private GLSurfaceView surface;
     private NativeLabRenderer renderer;
     private TextView status;
@@ -55,6 +57,7 @@ public final class MainActivity extends Activity {
             }
         });
         setContentView(root);
+        status.post(() -> status.setText(vulkanProbe()));
     }
     @Override protected void onPause() { super.onPause(); if(surface!=null) surface.onPause(); }
     @Override protected void onResume() { super.onResume(); if(surface!=null) surface.onResume(); }
