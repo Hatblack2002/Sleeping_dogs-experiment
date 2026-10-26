@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <vulkan/vulkan.h>
 #include <cstdio>
+#include <cstdarg>
 #include <cstring>
 #include <string>
 #include <vector>
