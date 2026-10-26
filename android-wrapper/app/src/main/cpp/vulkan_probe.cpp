@@ -40,7 +40,7 @@ Java_com_vertil_sleepingdogs_MainActivity_vulkanProbe(JNIEnv* env, jclass) {
         return env->NewStringUTF(report.c_str());
     }
     append(report, "Android surface: %s\nDebug utils: %s\n",
-           hasExtension(instanceExt, VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) ? "YES" : "NO",
+           hasExtension(instanceExt, "VK_KHR_android_surface") ? "YES" : "NO",
            hasExtension(instanceExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) ? "YES" : "NO");
     VkApplicationInfo app{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app.pApplicationName = "Sleeping Dogs Native Lab";
