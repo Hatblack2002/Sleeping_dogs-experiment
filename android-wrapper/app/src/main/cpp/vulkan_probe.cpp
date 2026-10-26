@@ -1,5 +1,8 @@
+#define VK_USE_PLATFORM_ANDROID_KHR
 #include <jni.h>
 #include <vulkan/vulkan.h>
+#include <android/native_window.h>
+#include <android/native_window_jni.h>
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
@@ -84,5 +87,102 @@ Java_com_vertil_sleepingdogs_MainActivity_vulkanProbe(JNIEnv* env, jclass) {
     }
     vkDestroyInstance(instance, nullptr);
     append(report, "\nProbe complete. This checks Vulkan enumeration only; no game renderer is linked.");
+    return env->NewStringUTF(report.c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_vertil_sleepingdogs_MainActivity_vulkanProbeSurface(JNIEnv* env, jclass, jobject javaSurface) {
+    std::string report = "VULKAN ANDROID SURFACE PROBE\\n";
+    ANativeWindow* window = ANativeWindow_fromSurface(env, javaSurface);
+    if (!window) {
+        append(report, "ANativeWindow_fromSurface: FAILED\\n");
+        return env->NewStringUTF(report.c_str());
+    }
+    uint32_t count = 0;
+    VkResult r = vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+    std::vector<VkExtensionProperties> extensions(count);
+    if (r == VK_SUCCESS) r = vkEnumerateInstanceExtensionProperties(nullptr, &count, extensions.data());
+    const bool surfaceExt = hasExtension(extensions, "VK_KHR_surface");
+    const bool androidExt = hasExtension(extensions, "VK_KHR_android_surface");
+    append(report, "VK_KHR_surface: %s\\nVK_KHR_android_surface: %s\\n",
+           surfaceExt ? "YES" : "NO", androidExt ? "YES" : "NO");
+    if (r != VK_SUCCESS || !surfaceExt || !androidExt) {
+        append(report, "Required instance WSI extension unavailable; result=%d\\n", r);
+        ANativeWindow_release(window);
+        return env->NewStringUTF(report.c_str());
+    }
+    const char* enabled[] = {"VK_KHR_surface", "VK_KHR_android_surface"};
+    VkApplicationInfo app{};
+    app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app.pApplicationName = "Sleeping Dogs Android WSI probe";
+    app.apiVersion = VK_API_VERSION_1_0;
+    VkInstanceCreateInfo ci{};
+    ci.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    ci.pApplicationInfo = &app;
+    ci.enabledExtensionCount = 2;
+    ci.ppEnabledExtensionNames = enabled;
+    VkInstance instance = VK_NULL_HANDLE;
+    r = vkCreateInstance(&ci, nullptr, &instance);
+    append(report, "vkCreateInstance with Android WSI: %d\\n", r);
+    if (r != VK_SUCCESS) {
+        ANativeWindow_release(window);
+        return env->NewStringUTF(report.c_str());
+    }
+    auto createSurface = reinterpret_cast<PFN_vkCreateAndroidSurfaceKHR>(
+        vkGetInstanceProcAddr(instance, "vkCreateAndroidSurfaceKHR"));
+    auto destroySurface = reinterpret_cast<PFN_vkDestroySurfaceKHR>(
+        vkGetInstanceProcAddr(instance, "vkDestroySurfaceKHR"));
+    auto getPresent = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceSupportKHR>(
+        vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceSurfaceSupportKHR"));
+    auto getCaps = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(
+        vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"));
+    auto getFormats = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(
+        vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR"));
+    auto getModes = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(
+        vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"));
+    VkAndroidSurfaceCreateInfoKHR sci{};
+    sci.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    sci.window = window;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    r = createSurface ? createSurface(instance, &sci, nullptr, &surface) : VK_ERROR_EXTENSION_NOT_PRESENT;
+    append(report, "vkCreateAndroidSurfaceKHR: %d\\n", r);
+    uint32_t deviceCount = 0;
+    if (r == VK_SUCCESS) r = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+    append(report, "Physical devices: %u (result %d)\\n", deviceCount, r);
+    if (r == VK_SUCCESS && deviceCount) {
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        r = vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+        for (uint32_t i = 0; r == VK_SUCCESS && i < deviceCount; ++i) {
+            VkPhysicalDeviceProperties props{};
+            vkGetPhysicalDeviceProperties(devices[i], &props);
+            uint32_t familyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &familyCount, nullptr);
+            std::vector<VkQueueFamilyProperties> families(familyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &familyCount, families.data());
+            bool present = false, graphics = false;
+            for (uint32_t q = 0; q < familyCount; ++q) {
+                VkBool32 supported = VK_FALSE;
+                if (getPresent && surface) getPresent(devices[i], q, surface, &supported);
+                if (supported && (families[q].queueFlags & VK_QUEUE_GRAPHICS_BIT)) {
+                    present = true; graphics = true;
+                }
+            }
+            VkSurfaceCapabilitiesKHR caps{};
+            VkResult cr = getCaps && surface ? getCaps(devices[i], surface, &caps) : VK_ERROR_EXTENSION_NOT_PRESENT;
+            uint32_t formatCount = 0, modeCount = 0;
+            VkResult fr = getFormats && surface ? getFormats(devices[i], surface, &formatCount, nullptr) : VK_ERROR_EXTENSION_NOT_PRESENT;
+            VkResult mr = getModes && surface ? getModes(devices[i], surface, &modeCount, nullptr) : VK_ERROR_EXTENSION_NOT_PRESENT;
+            append(report, "\\nGPU: %s\\nGraphics+present queue: %s\\nSurface caps: %d\\nFormats: %u (%d)\\nPresent modes: %u (%d)\\n",
+                   props.deviceName, (present && graphics) ? "YES" : "NO", cr, formatCount, fr, modeCount, mr);
+            if (cr == VK_SUCCESS)
+                append(report, "Surface extent min/max: %ux%u / %ux%u\\n",
+                       caps.minImageExtent.width, caps.minImageExtent.height,
+                       caps.maxImageExtent.width, caps.maxImageExtent.height);
+        }
+    }
+    if (surface && destroySurface) destroySurface(instance, surface, nullptr);
+    vkDestroyInstance(instance, nullptr);
+    ANativeWindow_release(window);
+    append(report, "\\nWSI probe complete; no game renderer linked.");
     return env->NewStringUTF(report.c_str());
 }
