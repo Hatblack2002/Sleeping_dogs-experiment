@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(sleepingdogs_native_lab LANGUAGES C CXX)
+add_library(nativeprobe SHARED vulkan_probe.cpp)
+find_library(vulkan-lib vulkan)
+find_library(log-lib log)
+target_compile_features(nativeprobe PRIVATE cxx_std_17)
+target_compile_options(nativeprobe PRIVATE -Wall -Wextra -Werror=return-type)
+target_link_libraries(nativeprobe ${vulkan-lib} ${log-lib})
