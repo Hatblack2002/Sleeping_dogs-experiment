@@ -1,0 +1,43 @@
+name: Native Android graphics lab
+on:
+  push:
+    paths:
+      - 'android-wrapper/**'
+      - '.github/workflows/native-graphics-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build debug APK
+        working-directory: android-wrapper
+        run: gradle --no-daemon --stacktrace assembleDebug
+      - name: Verify APK and manifest
+        run: |
+          test -s android-wrapper/app/build/outputs/apk/debug/app-debug.apk
+          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging android-wrapper/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum android-wrapper/app/build/outputs/apk/debug/app-debug.apk | tee apk-sha256.txt
+      - name: Upload installable graphics-test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sleeping-dogs-native-graphics-lab-debug
+          path: |
+            android-wrapper/app/build/outputs/apk/debug/app-debug.apk
+            apk-sha256.txt
+          if-no-files-found: error
+          retention-days: 30
