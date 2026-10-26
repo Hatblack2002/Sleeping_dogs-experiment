@@ -5,6 +5,7 @@ import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
@@ -15,6 +16,7 @@ import android.view.WindowManager;
 public final class MainActivity extends Activity {
     static { System.loadLibrary("nativeprobe"); }
     private static native String vulkanProbe();
+    private static native String vulkanProbeSurface(android.view.Surface surface);
     private GLSurfaceView surface;
     private NativeLabRenderer renderer;
     private TextView status;
